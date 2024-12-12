@@ -1,0 +1,118 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  # push:
+  #   branches: [ "main" ]
+  # pull_request:
+  #   branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+env:
+  ARM_TOOLCHAIN_32: arm-none-linux-gnueabihf
+  ARM_TOOLCHAIN_64: aarch64-none-linux-gnu
+  TOOLCHAIN_VER: 12.3.rel1
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: 🖥️ 检查服务器配置
+        run: |
+          echo "警告⚠"
+          echo "若分配的服务器性能不足，务必及时取消，重新运行！"
+          echo "已知编译成功CPU型号：8370C,8171M"
+          echo "已知性能不足CPU型号：8272CL,E5系列"
+          echo "--------------------------CPU信息--------------------------"
+          echo "CPU物理数量:$(cat /proc/cpuinfo| grep "physical id"| sort| uniq| wc -l)"
+          echo -e "CPU核心及版本信息：$(cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c) \n"
+          echo "--------------------------内存信息--------------------------"
+          echo "已安装内存详细信息："
+          sudo lshw -short -C memory | grep GiB
+          echo -e "\n"
+          echo "--------------------------硬盘信息--------------------------"
+          echo -e  "硬盘数量：$(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
+          echo "硬盘详情："
+          df -Th
+          sudo mount -o remount,rw /mnt/
+          sudo mount
+          ls -ld /mnt
+          sudo chmod 0755 /mnt/
+          sudo rm -rf /mnt/openwrt;sudo mkdir -p /mnt/openwrt
+          sudo chmod 0777 /mnt/openwrt/
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔑 Setup SSH
+        uses: MrSquaare/ssh-setup-action@v3
+        with:
+          host: gitee.com
+          private-key: ${{ secrets.UDP_GW }}
+      - name: 📂 Checkout private tools
+        run: |
+          git clone git@gitee.com:hstarlive/XPlaneUDP.git --depth=1
+
+      - name: 🛠️ Install latest stable
+        uses: dtolnay/rust-toolchain@master
+        with:
+            toolchain: stable
+            target: aarch64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, x86_64-pc-windows-msvc
+            components: rustfmt, clippy
+      - name: 🗂️ rust-cache
+        uses:  Swatinem/rust-cache@v2
+      - name: 📦 install cargo-xwin
+        uses: actions-rs/cargo@v1
+        with:
+            command: install 
+            args: --locked cargo-xwin
+      - name: 📦 install cargo-make
+        uses: actions-rs/cargo@v1
+        with:
+          command: install 
+          args: cargo-make
+      - name: 🛠️ get arm-gnu-toolchain
+        run: |
+          wget -O /opt/arm-none-linux-gnueabihf.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-arm-none-linux-gnueabihf.tar.xz
+          mkdir -p /opt/arm-none-linux-gnueabihf
+          tar -vxf /opt/arm-none-linux-gnueabihf.tar.xz -C /opt/arm-none-linux-gnueabihf --strip-components 1
+          ln -s /opt/arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-gcc /opt/arm-none-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+          wget -O /opt/aarch64-none-linux-gnu.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-aarch64-none-linux-gnu.tar.xz
+          mkdir -p /opt/aarch64-none-linux-gnu
+          tar -vxf /opt/aarch64-none-linux-gnu.tar.xz -C /opt/aarch64-none-linux-gnu --strip-components 1
+          ln -s /opt/aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc /opt/aarch64-none-linux-gnu/bin/aarch64-linux-gnu-gcc
+          echo "/opt/aarch64-none-linux-gnu/bin" >> "$GITHUB_PATH"
+          echo "/opt/arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
+          echo test, and deploy your project.          
+
+      # Runs a set of commands using the runners shell
+      - name: 🏗️ build
+        run: |
+          cd XPlaneUDP
+          cargo make all
+      - name: 🕒 Get timestamp
+        id: timestamp
+        run: |
+          (export TZ='Asia/Shanghai'; echo "timestamp=$(date +'%Y%m%d_%H%M')" >> $GITHUB_OUTPUT)
+      - name: 📤 Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: XPlaneUDP-${{ steps.timestamp.outputs.timestamp }}
+          path: XPlaneUDP/target/*.gz
+
+      # - name: Release
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     files: XPlaneUDP/target/*.gz
+      #     tag_name: test
+      #     name: ${{ steps.date.outputs.date }}
