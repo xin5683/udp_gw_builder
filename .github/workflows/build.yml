@@ -22,8 +22,11 @@ env:
 jobs:
   # This workflow contains a single job called "build"
   build:
+    strategy:
+        matrix:
+          os: [ubuntu-22.04,ubuntu-24.04,self-hosted] #self-hosted 
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -44,12 +47,6 @@ jobs:
           echo -e  "硬盘数量：$(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
           echo "硬盘详情："
           df -Th
-          sudo mount -o remount,rw /mnt/
-          sudo mount
-          ls -ld /mnt
-          sudo chmod 0755 /mnt/
-          sudo rm -rf /mnt/openwrt;sudo mkdir -p /mnt/openwrt
-          sudo chmod 0777 /mnt/openwrt/
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -71,6 +68,9 @@ jobs:
             components: rustfmt, clippy
       - name: 🗂️ rust-cache
         uses:  Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ matrix.os }}
+
       - name: 📦 install cargo-xwin
         uses: actions-rs/cargo@v1
         with:
@@ -82,17 +82,18 @@ jobs:
           command: install 
           args: cargo-make
       - name: 🛠️ get arm-gnu-toolchain
+        if: matrix.os != 'self-hosted'
         run: |
-          wget -O /opt/arm-none-linux-gnueabihf.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-arm-none-linux-gnueabihf.tar.xz
-          mkdir -p /opt/arm-none-linux-gnueabihf
-          tar -vxf /opt/arm-none-linux-gnueabihf.tar.xz -C /opt/arm-none-linux-gnueabihf --strip-components 1
-          ln -s /opt/arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-gcc /opt/arm-none-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
-          wget -O /opt/aarch64-none-linux-gnu.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-aarch64-none-linux-gnu.tar.xz
-          mkdir -p /opt/aarch64-none-linux-gnu
-          tar -vxf /opt/aarch64-none-linux-gnu.tar.xz -C /opt/aarch64-none-linux-gnu --strip-components 1
-          ln -s /opt/aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc /opt/aarch64-none-linux-gnu/bin/aarch64-linux-gnu-gcc
-          echo "/opt/aarch64-none-linux-gnu/bin" >> "$GITHUB_PATH"
-          echo "/opt/arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
+          wget -O ${{ github.workspace }}arm-none-linux-gnueabihf.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-arm-none-linux-gnueabihf.tar.xz
+          mkdir -p ${{ github.workspace }}arm-none-linux-gnueabihf
+          tar -vxf ${{ github.workspace }}arm-none-linux-gnueabihf.tar.xz -C ${{ github.workspace }}arm-none-linux-gnueabihf --strip-components 1
+          ln -s ${{ github.workspace }}arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-gcc ${{ github.workspace }}arm-none-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+          wget -O ${{ github.workspace }}aarch64-none-linux-gnu.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-aarch64-none-linux-gnu.tar.xz
+          mkdir -p ${{ github.workspace }}aarch64-none-linux-gnu
+          tar -vxf ${{ github.workspace }}aarch64-none-linux-gnu.tar.xz -C ${{ github.workspace }}aarch64-none-linux-gnu --strip-components 1
+          ln -s ${{ github.workspace }}aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc ${{ github.workspace }}aarch64-none-linux-gnu/bin/aarch64-linux-gnu-gcc
+          echo "${{ github.workspace }}aarch64-none-linux-gnu/bin" >> "$GITHUB_PATH"
+          echo "${{ github.workspace }}arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
           echo test, and deploy your project.          
 
       # Runs a set of commands using the runners shell
@@ -107,7 +108,7 @@ jobs:
       - name: 📤 Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: XPlaneUDP-${{ steps.timestamp.outputs.timestamp }}
+          name: XPlaneUDP-${{ steps.timestamp.outputs.timestamp }}-${{ matrix.os }}
           path: XPlaneUDP/target/*.gz
 
       # - name: Release
