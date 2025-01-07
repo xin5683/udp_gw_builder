@@ -111,6 +111,32 @@ jobs:
           name: XPlaneUDP-${{ steps.timestamp.outputs.timestamp }}-${{ matrix.os }}
           path: XPlaneUDP/target/*.gz
 
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.12'
+
+      - name: generate web page
+        run: |
+          mkdir -p public && cp XPlaneUDP/target/*.tar.gz ./public/ && python generate_files.py public/ -o public/
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+            node-version: 20
+      
+      - name: Install Netlify
+        run: npm install netlify-cli -g
+
+      - name: Deploy to Netlify
+        if: matrix.os == 'self-hosted'
+        run: |
+            netlify deploy \
+            --dir public \
+            --prod \
+            --site ${{ secrets.NETLIFY_SITE_ID }} \
+            --auth ${{ secrets.NETLIFY_API_TOKEN }} \
+
       # - name: Release
       #   uses: softprops/action-gh-release@v2
       #   with:
