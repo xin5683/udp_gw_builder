@@ -100,6 +100,7 @@ jobs:
       - name: 🏗️ build
         run: |
           cd XPlaneUDP
+          cargo update
           cargo make all
       - name: 🕒 Get timestamp
         id: timestamp
