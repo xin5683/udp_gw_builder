@@ -24,7 +24,8 @@ jobs:
   build:
     strategy:
         matrix:
-          os: [ubuntu-22.04,ubuntu-24.04,self-hosted] #self-hosted 
+          os: [ubuntu-22.04,ubuntu-24.04,self-hosted,ubuntu-24.04-arm,ubuntu-22.04-arm] #self-hosted
+        fail-fast: false
     # The type of runner that the job will run on
     runs-on: ${{ matrix.os }}
 
@@ -32,13 +33,9 @@ jobs:
     steps:
       - name: 🖥️ 检查服务器配置
         run: |
-          echo "警告⚠"
-          echo "若分配的服务器性能不足，务必及时取消，重新运行！"
-          echo "已知编译成功CPU型号：8370C,8171M"
-          echo "已知性能不足CPU型号：8272CL,E5系列"
           echo "--------------------------CPU信息--------------------------"
-          echo "CPU物理数量:$(cat /proc/cpuinfo| grep "physical id"| sort| uniq| wc -l)"
-          echo -e "CPU核心及版本信息：$(cat /proc/cpuinfo | grep name | cut -f2 -d: | uniq -c) \n"
+          echo "CPU物理数量:$(lscpu -p | awk -F, '/^[^#]/ {print $2}' | sort -u | wc -l)"
+          echo -e "CPU核心及版本信息:$(cat /proc/cpuinfo | grep 'model name' | cut -f2 -d: | uniq -c)"
           echo "--------------------------内存信息--------------------------"
           echo "已安装内存详细信息："
           sudo lshw -short -C memory | grep GiB
@@ -51,11 +48,20 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
+      - name: 🔎 get IP info
+        if: matrix.os != 'self-hosted'
+        run: |
+            echo "--------------------------private git info--------------------------"
+            curl ipinfo.io/$(host gitee.com | awk '/has address/ { print $4; exit }')
+            echo "--------------------------local info--------------------------"
+            curl ipinfo.io
+
       - name: 🔑 Setup SSH
         uses: MrSquaare/ssh-setup-action@v3
         with:
           host: gitee.com
           private-key: ${{ secrets.UDP_GW }}
+
       - name: 📂 Checkout private tools
         run: |
           git clone git@gitee.com:hstarlive/XPlaneUDP.git --depth=1
@@ -100,6 +106,7 @@ jobs:
       - name: 🏗️ build
         run: |
           cd XPlaneUDP
+          rustup update
           cargo update
           cargo make all
       - name: 🕒 Get timestamp
