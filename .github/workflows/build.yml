@@ -87,20 +87,31 @@ jobs:
         with:
           command: install 
           args: cargo-make
+
       - name: 🛠️ get arm-gnu-toolchain
-        if: matrix.os != 'self-hosted'
+        if: runner.arch == 'X64'
+        uses: xin5683/armgcc@main
+        with:
+          target: 'arm-none-linux-gnueabihf,aarch64-none-linux-gnu'
+          version: ${{ env.TOOLCHAIN_VER }}
+
+      - name: 🛠️ get arm-gnu-toolchain ARM64
+        if: runner.arch == 'ARM64' && matrix.os != 'self-hosted'
         run: |
-          wget -O ${{ github.workspace }}arm-none-linux-gnueabihf.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-arm-none-linux-gnueabihf.tar.xz
-          mkdir -p ${{ github.workspace }}arm-none-linux-gnueabihf
-          tar -vxf ${{ github.workspace }}arm-none-linux-gnueabihf.tar.xz -C ${{ github.workspace }}arm-none-linux-gnueabihf --strip-components 1
-          ln -s ${{ github.workspace }}arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-gcc ${{ github.workspace }}arm-none-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
-          wget -O ${{ github.workspace }}aarch64-none-linux-gnu.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-aarch64-none-linux-gnu.tar.xz
-          mkdir -p ${{ github.workspace }}aarch64-none-linux-gnu
-          tar -vxf ${{ github.workspace }}aarch64-none-linux-gnu.tar.xz -C ${{ github.workspace }}aarch64-none-linux-gnu --strip-components 1
-          ln -s ${{ github.workspace }}aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc ${{ github.workspace }}aarch64-none-linux-gnu/bin/aarch64-linux-gnu-gcc
-          echo "${{ github.workspace }}aarch64-none-linux-gnu/bin" >> "$GITHUB_PATH"
-          echo "${{ github.workspace }}arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
-          echo test, and deploy your project.          
+            sudo -E apt-get update
+            sudo -E apt-get -y install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+        # run: |
+        #   wget -O ${{ github.workspace }}arm-none-linux-gnueabihf.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-arm-none-linux-gnueabihf.tar.xz
+        #   mkdir -p ${{ github.workspace }}arm-none-linux-gnueabihf
+        #   tar -vxf ${{ github.workspace }}arm-none-linux-gnueabihf.tar.xz -C ${{ github.workspace }}arm-none-linux-gnueabihf --strip-components 1
+        #   ln -s ${{ github.workspace }}arm-none-linux-gnueabihf/bin/arm-none-linux-gnueabihf-gcc ${{ github.workspace }}arm-none-linux-gnueabihf/bin/arm-linux-gnueabihf-gcc
+        #   wget -O ${{ github.workspace }}aarch64-none-linux-gnu.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-aarch64-none-linux-gnu.tar.xz
+        #   mkdir -p ${{ github.workspace }}aarch64-none-linux-gnu
+        #   tar -vxf ${{ github.workspace }}aarch64-none-linux-gnu.tar.xz -C ${{ github.workspace }}aarch64-none-linux-gnu --strip-components 1
+        #   ln -s ${{ github.workspace }}aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc ${{ github.workspace }}aarch64-none-linux-gnu/bin/aarch64-linux-gnu-gcc
+        #   echo "${{ github.workspace }}aarch64-none-linux-gnu/bin" >> "$GITHUB_PATH"
+        #   echo "${{ github.workspace }}arm-none-linux-gnueabihf/bin" >> "$GITHUB_PATH"
+        #   echo test, and deploy your project.          
 
       # Runs a set of commands using the runners shell
       - name: 🏗️ build
