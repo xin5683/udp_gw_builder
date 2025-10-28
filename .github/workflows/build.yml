@@ -120,7 +120,7 @@ jobs:
           cd XPlaneUDP
           rustup update
           cargo update
-          cargo make all
+          cargo make -p production all
       - name: 🕒 Get timestamp
         id: timestamp
         run: |
