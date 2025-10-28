@@ -116,11 +116,16 @@ jobs:
 
       # Runs a set of commands using the runners shell
       - name: 🏗️ build
-        run: |
-          cd XPlaneUDP
-          rustup update
-          cargo update
-          cargo make -p production all
+        uses: nick-fields/retry@v3
+        with:
+            timeout_minutes: 60
+            max_attempts: 3
+            command: |
+                cd XPlaneUDP
+                rustup update
+                cargo update
+                cargo make -p production all
+            new_command_on_retry: cargo make -p production all
       - name: 🕒 Get timestamp
         id: timestamp
         run: |
