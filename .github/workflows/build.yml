@@ -76,6 +76,7 @@ jobs:
         uses:  Swatinem/rust-cache@v2
         with:
           prefix-key: ${{ matrix.os }}
+          workspaces: "XPlaneUDP -> target"
 
       - name: 📦 install cargo-xwin
         uses: actions-rs/cargo@v1
