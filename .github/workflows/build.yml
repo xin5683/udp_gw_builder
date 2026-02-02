@@ -155,7 +155,7 @@ jobs:
         run: npm install netlify-cli -g
 
       - name: Deploy to Netlify
-        if: matrix.os == 'self-hosted'
+        if: matrix.os == 'ubuntu-22.04-arm'
         run: |
             netlify deploy \
             --dir public \
