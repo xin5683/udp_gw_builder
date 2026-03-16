@@ -38,7 +38,11 @@ jobs:
           echo -e "CPU核心及版本信息:$(cat /proc/cpuinfo | grep 'model name' | cut -f2 -d: | uniq -c)"
           echo "--------------------------内存信息--------------------------"
           echo "已安装内存详细信息："
-          sudo lshw -short -C memory | grep GiB
+          if command -v lshw &> /dev/null; then
+            sudo lshw -short -C memory | grep GiB
+          else
+            echo "lshw 命令不可用，跳过详细内存信息显示"
+          fi
           echo -e "\n"
           echo "--------------------------硬盘信息--------------------------"
           echo -e  "硬盘数量：$(ls /dev/sd* | grep -v [1-9] | wc -l) \n"
@@ -97,7 +101,7 @@ jobs:
           version: ${{ env.TOOLCHAIN_VER }}
 
       - name: 🛠️ get arm-gnu-toolchain ARM64
-        if: runner.arch == 'ARM64' && matrix.os != 'self-hosted'
+        if: runner.arch == 'ARM64'
         run: |
             sudo -E apt-get update
             sudo -E apt-get -y install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
