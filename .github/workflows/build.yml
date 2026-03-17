@@ -104,7 +104,7 @@ jobs:
         if: runner.arch == 'ARM64'
         run: |
             sudo -E apt-get update
-            sudo -E apt-get -y install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+            sudo -E apt-get -y install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf clang 
         # run: |
         #   wget -O ${{ github.workspace }}arm-none-linux-gnueabihf.tar.xz https://developer.arm.com/-/media/Files/downloads/gnu/$TOOLCHAIN_VER/binrel/arm-gnu-toolchain-$TOOLCHAIN_VER-x86_64-arm-none-linux-gnueabihf.tar.xz
         #   mkdir -p ${{ github.workspace }}arm-none-linux-gnueabihf
